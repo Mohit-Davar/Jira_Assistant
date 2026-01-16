@@ -1,0 +1,31 @@
+# Ignore artifacts:
+dist
+node_modules
+.DS_Store
+
+# Ignore git
+.git
+.git-credentials
+.gitattributes
+.gitconfig
+.github
+.gitkeep
+.gitmodules
+.git-blame-ignore-revs
+
+# Ignore logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Ignore specific project files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.vscode/
