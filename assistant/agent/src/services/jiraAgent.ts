@@ -1,4 +1,4 @@
-import { createAgent, type Tool } from 'langchain';
+import { createAgent } from 'langchain';
 
 interface AgentConfig {
   tools: any[];
