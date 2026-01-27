@@ -1,19 +1,61 @@
-import { searchIssues, getIssue } from "@/tools/issues.tool.js";
-import { createIssue, updateIssue } from "@/tools/mutations.tool.js";
-import { addComment, getComments } from "@/tools/comments.tool.js";
-import { transitionIssue, getTransitions } from "@/tools/transitions.tool.js";
-import { listProjects, getProject, getCurrentUser } from "@/tools/projects.tool.js";
+import { deleteAttachment, getAttachment } from '@/tools/attachments.tool.js';
+import { getIssueChangelog } from '@/tools/changelog.tool.js';
+import { addComment, deleteComment, getComments, updateComment } from '@/tools/comments.tool.js';
+import {
+  assignIssue,
+  createIssue,
+  deleteIssue,
+  getIssue,
+  searchIssues,
+  updateIssue,
+} from '@/tools/issues.tool.js';
+import { deleteIssueLink, getIssueLinks, getLinkTypes, linkIssues } from '@/tools/links.tool.js';
+import { getProject, listProjects } from '@/tools/projects.tool.js';
+import { getTransitions, transitionIssue } from '@/tools/transitions.tool.js';
+import { findUsers, getCurrentUser } from '@/tools/users.tool.js';
+import { addWorklog, deleteWorklog, getWorklogs, updateWorklog } from '@/tools/worklogs.tool.js';
 
 export const allTools = [
-    searchIssues,
-    getIssue,
-    getComments,
-    getTransitions,
-    listProjects,
-    getProject,
-    getCurrentUser,
-    createIssue,
-    updateIssue,
-    addComment,
-    transitionIssue,
+  // issues
+  searchIssues,
+  getIssue,
+  createIssue,
+  updateIssue,
+  assignIssue,
+  deleteIssue,
+  getIssueChangelog,
+
+  // comments
+  addComment,
+  getComments,
+  updateComment,
+  deleteComment,
+
+  // transitions
+  transitionIssue,
+  getTransitions,
+
+  // projects
+  listProjects,
+  getProject,
+
+  // users
+  findUsers,
+  getCurrentUser,
+
+  // worklogs
+  addWorklog,
+  getWorklogs,
+  updateWorklog,
+  deleteWorklog,
+
+  // attachments
+  getAttachment,
+  deleteAttachment,
+
+  // links
+  linkIssues,
+  getIssueLinks,
+  deleteIssueLink,
+  getLinkTypes,
 ];
