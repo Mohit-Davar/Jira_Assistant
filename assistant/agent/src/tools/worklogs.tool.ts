@@ -2,11 +2,12 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const addWorklog = tool(
   async ({ issueKey, timeSpent, started, comment }) => {
-    try {
-      const response = await jira.issueWorklogs.addWorklog({
+    const [error, response] = await expectError(
+      jira.issueWorklogs.addWorklog({
         issueIdOrKey: issueKey,
         timeSpent: timeSpent,
         started: started,
@@ -17,11 +18,14 @@ export const addWorklog = tool(
               content: [{ type: 'paragraph', content: [{ type: 'text', text: comment }] }],
             }
           : undefined,
-      });
-      return { success: true, worklogId: response.id };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true, worklogId: response.id };
   },
   {
     name: 'add_worklog',
@@ -40,23 +44,26 @@ export const addWorklog = tool(
 
 export const getWorklogs = tool(
   async ({ issueKey }) => {
-    try {
-      const response = await jira.issueWorklogs.getIssueWorklog({
+    const [error, response] = await expectError(
+      jira.issueWorklogs.getIssueWorklog({
         issueIdOrKey: issueKey,
-      });
-      const worklogs = response.worklogs?.map((w) => ({
-        id: w.id,
-        author: w.author?.displayName,
-        timeSpent: w.timeSpent,
-        started: w.started,
-        comment: w.comment?.content
-          ?.map((p: any) => p.content?.map((t: any) => t.text).join(''))
-          .join('\n'),
-      }));
-      return { issueKey, worklogs };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    const worklogs = response.worklogs?.map((w) => ({
+      id: w.id,
+      author: w.author?.displayName,
+      timeSpent: w.timeSpent,
+      started: w.started,
+      comment: w.comment?.content
+        ?.map((p: any) => p.content?.map((t: any) => t.text).join(''))
+        .join('\n'),
+    }));
+    return { issueKey, worklogs };
   },
   {
     name: 'get_worklogs',
@@ -69,8 +76,8 @@ export const getWorklogs = tool(
 
 export const updateWorklog = tool(
   async ({ issueKey, worklogId, timeSpent, started, comment }) => {
-    try {
-      await jira.issueWorklogs.updateWorklog({
+    const [error] = await expectError(
+      jira.issueWorklogs.updateWorklog({
         issueIdOrKey: issueKey,
         id: worklogId,
         timeSpent: timeSpent,
@@ -82,11 +89,14 @@ export const updateWorklog = tool(
               content: [{ type: 'paragraph', content: [{ type: 'text', text: comment }] }],
             }
           : undefined,
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'update_worklog',
@@ -103,15 +113,18 @@ export const updateWorklog = tool(
 
 export const deleteWorklog = tool(
   async ({ issueKey, worklogId }) => {
-    try {
-      await jira.issueWorklogs.deleteWorklog({
+    const [error] = await expectError(
+      jira.issueWorklogs.deleteWorklog({
         issueIdOrKey: issueKey,
         id: worklogId,
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'delete_worklog',

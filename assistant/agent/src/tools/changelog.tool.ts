@@ -2,29 +2,32 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const getIssueChangelog = tool(
   async ({ issueKey, maxResults }) => {
-    try {
-      const response = await jira.issues.getChangeLogs({
+    const [error, response] = await expectError(
+      jira.issues.getChangeLogs({
         issueIdOrKey: issueKey,
         maxResults,
-      });
+      }),
+    );
 
-      const formattedChangelog = response.values?.map((history) => ({
-        author: history.author?.displayName,
-        created: history.created,
-        changes: history.items?.map((item) => ({
-          field: item.field,
-          from: item.fromString,
-          to: item.toString,
-        })),
-      }));
-
-      return { issueKey, changelog: formattedChangelog };
-    } catch (error: any) {
+    if (error) {
       return { error: error.message };
     }
+
+    const formattedChangelog = response.values?.map((history) => ({
+      author: history.author?.displayName,
+      created: history.created,
+      changes: history.items?.map((item) => ({
+        field: item.field,
+        from: item.fromString,
+        to: item.toString,
+      })),
+    }));
+
+    return { issueKey, changelog: formattedChangelog };
   },
   {
     name: 'get_issue_changelog',

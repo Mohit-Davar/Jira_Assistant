@@ -2,11 +2,12 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const addComment = tool(
   async ({ issueKey, comment }) => {
-    try {
-      const response = await jira.issueComments.addComment({
+    const [error, response] = await expectError(
+      jira.issueComments.addComment({
         issueIdOrKey: issueKey,
         comment: {
           type: 'doc',
@@ -18,12 +19,14 @@ export const addComment = tool(
             },
           ],
         },
-      });
+      }),
+    );
 
-      return { success: true, commentId: response.id };
-    } catch (error: any) {
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true, commentId: response.id };
   },
   {
     name: 'add_comment',
@@ -37,25 +40,27 @@ export const addComment = tool(
 
 export const getComments = tool(
   async ({ issueKey }) => {
-    try {
-      const response = await jira.issueComments.getComments({
+    const [error, response] = await expectError(
+      jira.issueComments.getComments({
         issueIdOrKey: issueKey,
-      });
+      }),
+    );
 
-      // Map complex ADF content to simple strings for agent readability
-      const comments = response.comments?.map((c) => ({
-        id: c.id,
-        author: c.author?.displayName,
-        created: c.created,
-        body: c.body?.content
-          ?.map((p: any) => p.content?.map((t: any) => t.text).join(''))
-          .join('\n'),
-      }));
-
-      return { issueKey, comments };
-    } catch (error: any) {
+    if (error) {
       return { error: error.message };
     }
+
+    // Map complex ADF content to simple strings for agent readability
+    const comments = response.comments?.map((c) => ({
+      id: c.id,
+      author: c.author?.displayName,
+      created: c.created,
+      body: c.body?.content
+        ?.map((p: any) => p.content?.map((t: any) => t.text).join(''))
+        .join('\n'),
+    }));
+
+    return { issueKey, comments };
   },
   {
     name: 'get_comments',
@@ -68,8 +73,8 @@ export const getComments = tool(
 
 export const updateComment = tool(
   async ({ issueKey, commentId, comment }) => {
-    try {
-      await jira.issueComments.updateComment({
+    const [error] = await expectError(
+      jira.issueComments.updateComment({
         issueIdOrKey: issueKey,
         id: commentId,
         body: {
@@ -82,11 +87,14 @@ export const updateComment = tool(
             },
           ],
         },
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'update_comment',
@@ -101,15 +109,18 @@ export const updateComment = tool(
 
 export const deleteComment = tool(
   async ({ issueKey, commentId }) => {
-    try {
-      await jira.issueComments.deleteComment({
+    const [error] = await expectError(
+      jira.issueComments.deleteComment({
         issueIdOrKey: issueKey,
         id: commentId,
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'delete_comment',

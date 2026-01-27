@@ -2,22 +2,26 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const findUsers = tool(
   async ({ query, maxResults }) => {
-    try {
-      const users = await jira.userSearch.findUsers({
+    const [error, users] = await expectError(
+      jira.userSearch.findUsers({
         query,
         maxResults,
-      });
-      return users.map((u) => ({
-        accountId: u.accountId,
-        displayName: u.displayName,
-        emailAddress: u.emailAddress,
-      }));
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return users.map((u) => ({
+      accountId: u.accountId,
+      displayName: u.displayName,
+      emailAddress: u.emailAddress,
+    }));
   },
   {
     name: 'find_users',
@@ -31,17 +35,18 @@ export const findUsers = tool(
 
 export const getCurrentUser = tool(
   async () => {
-    try {
-      const user = await jira.myself.getCurrentUser();
-      return {
-        accountId: user.accountId,
-        displayName: user.displayName,
-        email: user.emailAddress,
-        timezone: user.timeZone,
-      };
-    } catch (e: any) {
-      return { error: e.message };
+    const [error, user] = await expectError(jira.myself.getCurrentUser());
+
+    if (error) {
+      return { error: error.message };
     }
+
+    return {
+      accountId: user.accountId,
+      displayName: user.displayName,
+      email: user.emailAddress,
+      timezone: user.timeZone,
+    };
   },
   {
     name: 'get_current_user',

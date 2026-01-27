@@ -2,22 +2,26 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const getAttachment = tool(
   async ({ attachmentId }) => {
-    try {
-      const attachment = await jira.issueAttachments.getAttachment({ id: attachmentId });
-      return {
-        filename: attachment.filename,
-        author: attachment.author?.displayName,
-        created: attachment.created,
-        size: attachment.size,
-        mimeType: attachment.mimeType,
-        contentUrl: attachment.content,
-      };
-    } catch (error: any) {
+    const [error, attachment] = await expectError(
+      jira.issueAttachments.getAttachment({ id: attachmentId }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return {
+      filename: attachment.filename,
+      author: attachment.author?.displayName,
+      created: attachment.created,
+      size: attachment.size,
+      mimeType: attachment.mimeType,
+      contentUrl: attachment.content,
+    };
   },
   {
     name: 'get_attachment_details',
@@ -30,12 +34,13 @@ export const getAttachment = tool(
 
 export const deleteAttachment = tool(
   async ({ attachmentId }) => {
-    try {
-      await jira.issueAttachments.removeAttachment({ id: attachmentId });
-      return { success: true };
-    } catch (error: any) {
+    const [error] = await expectError(jira.issueAttachments.removeAttachment({ id: attachmentId }));
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'delete_attachment',

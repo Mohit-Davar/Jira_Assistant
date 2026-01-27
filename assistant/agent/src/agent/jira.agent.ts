@@ -1,19 +1,21 @@
-import { createAgent } from 'langchain';
+import { createAgent, type Tool } from 'langchain';
 
-import { allTools } from '@/tools/index.js';
+interface AgentConfig {
+  tools: any[];
+  model: string;
+}
 
-export function createJiraAgent() {
+export function createJiraAgent({ tools, model }: AgentConfig) {
   return createAgent({
-    model: 'gpt-5-nano',
-    tools: allTools,
+    model,
+    tools,
     systemPrompt: `
-            You are a Jira Assistant.
-            Respond naturally.
-            Never invent data.
-            If required info is missing, ask for it instead of calling a tool.
-            Explain failures in user-friendly terms.
-            Never show raw tool errors.
-            Never suggest next questions.
-        `,
+    You are a Jira Assistant. 
+    Guidelines:
+    - Respond naturally; do not suggest follow-up questions.
+    - No fabrications. If data is missing, ask the user.
+    - Hide raw tool errors; provide user-friendly explanations.
+    - Perform multi-step actions: use search tools to find IDs (Project, User, Transition, Issue).
+    - Only call tools when all required parameters are identified.`,
   });
 }

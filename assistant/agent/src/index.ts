@@ -1,19 +1,26 @@
-import 'dotenv/config';
+import express from 'express';
+import { chat } from '@/lib/queryController.js';
+import { expectError } from '@/lib/expectError.js';
 
-import { createJiraAgent } from '@/agent/jira.agent.js';
+const app = express();
+app.use(express.json());
 
-const agent = createJiraAgent();
-
-async function chat(query: string): Promise<string> {
-  try {
-    const result = await agent.invoke({
-      messages: [{ role: 'user', content: query }],
-    });
-    return result.messages[result.messages.length - 1].content as string;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return `Error: ${message}`;
+app.post('/chat', async (req, res) => {
+  const { query } = req.body;
+  if (typeof query !== 'string') {
+    return res.status(400).json({ error: 'Invalid query format' });
   }
-}
 
-chat('Explain issue LJ-1').then((value) => console.log(value));
+  const [error, result] = await expectError(chat(query));
+  if (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: message });
+  }
+
+  return res.status(200).json({ response: result });
+});
+
+const port = process.env.PORT || 8000;
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});

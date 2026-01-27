@@ -3,26 +3,29 @@ import * as z from 'zod';
 
 import { formatIssueFields, formatSearchResult } from '@/lib/fm.js';
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const searchIssues = tool(
   async ({ jql, maxResults, fields }) => {
-    try {
-      const response = await jira.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
+    const [error, response] = await expectError(
+      jira.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
         jql,
         maxResults,
         fields,
-      });
+      }),
+    );
 
-      if (!response.issues?.length) {
-        return 'No issues found matching the query.';
-      }
-
-      const issues = response.issues.map(formatSearchResult);
-      return JSON.stringify(issues, null, 2);
-    } catch (error) {
+    if (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return `Error searching issues: ${message}`;
     }
+
+    if (!response.issues?.length) {
+      return 'No issues found matching the query.';
+    }
+
+    const issues = response.issues.map(formatSearchResult);
+    return JSON.stringify(issues, null, 2);
   },
   {
     name: 'issue_search',
@@ -40,18 +43,20 @@ export const searchIssues = tool(
 
 export const getIssue = tool(
   async ({ issueIdOrKey, fields }) => {
-    try {
-      const issue = await jira.issues.getIssue({
+    const [error, issue] = await expectError(
+      jira.issues.getIssue({
         issueIdOrKey,
         fields,
-      });
+      }),
+    );
 
-      const result = formatIssueFields(issue.fields);
-      return JSON.stringify(result, null, 2);
-    } catch (error) {
+    if (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return `Error getting issue: ${message}`;
     }
+
+    const result = formatIssueFields(issue.fields);
+    return JSON.stringify(result, null, 2);
   },
   {
     name: 'issue_search',
@@ -80,8 +85,8 @@ export const getIssue = tool(
 
 export const createIssue = tool(
   async (args) => {
-    try {
-      const issue = await jira.issues.createIssue({
+    const [error, issue] = await expectError(
+      jira.issues.createIssue({
         fields: {
           project: { key: args.projectKey },
           summary: args.summary,
@@ -103,12 +108,14 @@ export const createIssue = tool(
           labels: args.labels ?? [],
           parent: args.parentId ? { key: args.parentId } : undefined,
         },
-      });
+      }),
+    );
 
-      return { key: issue.key, link: `${process.env.JIRA_HOST}/browse/${issue.key}` };
-    } catch (error: any) {
+    if (error) {
       return { error: error.message };
     }
+
+    return { key: issue.key, link: `${process.env.JIRA_HOST}/browse/${issue.key}` };
   },
   {
     name: 'issue_create',
@@ -128,8 +135,8 @@ export const createIssue = tool(
 
 export const updateIssue = tool(
   async (args) => {
-    try {
-      await jira.issues.editIssue({
+    const [error] = await expectError(
+      jira.issues.editIssue({
         issueIdOrKey: args.issueKey,
         fields: {
           ...(args.summary && { summary: args.summary }),
@@ -148,11 +155,14 @@ export const updateIssue = tool(
           ...(args.priority && { priority: { name: args.priority } }),
           ...(args.labels && { labels: args.labels }),
         },
-      });
-      return { success: true, key: args.issueKey };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true, key: args.issueKey };
   },
   {
     name: 'issue_update',
@@ -169,16 +179,19 @@ export const updateIssue = tool(
 
 export const assignIssue = tool(
   async ({ issueKey, accountId }) => {
-    try {
-      await jira.issues.assignIssue({
+    const [error] = await expectError(
+      jira.issues.assignIssue({
         issueIdOrKey: issueKey,
         // Use accountId: null to unassign
         accountId: accountId === 'unassigned' ? null : accountId,
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'assign_issue',
@@ -196,14 +209,17 @@ export const assignIssue = tool(
 
 export const deleteIssue = tool(
   async ({ issueKey }) => {
-    try {
-      await jira.issues.deleteIssue({
+    const [error] = await expectError(
+      jira.issues.deleteIssue({
         issueIdOrKey: issueKey,
-      });
-      return { success: true, key: issueKey };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true, key: issueKey };
   },
   {
     name: 'issue_delete',

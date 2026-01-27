@@ -2,31 +2,40 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const transitionIssue = tool(
   async ({ issueKey, statusName }) => {
-    try {
-      // Fetch valid transitions for this specific issue
-      const { transitions } = await jira.issues.getTransitions({ issueIdOrKey: issueKey });
+    // Fetch valid transitions for this specific issue
+    const [errorTransitions, { transitions }] = await expectError(
+      jira.issues.getTransitions({ issueIdOrKey: issueKey }),
+    );
 
-      // Find a case-insensitive match
-      const target = transitions?.find((t) => t.name?.toLowerCase() === statusName.toLowerCase());
+    if (errorTransitions) {
+      return { error: errorTransitions.message };
+    }
 
-      if (!target) {
-        const available = transitions?.map((t) => t.name).join(', ');
-        return { error: `Cannot move to '${statusName}'. Valid options: ${available}` };
-      }
+    // Find a case-insensitive match
+    const target = transitions?.find((t) => t.name?.toLowerCase() === statusName.toLowerCase());
 
-      // Execute the move
-      await jira.issues.doTransition({
+    if (!target) {
+      const available = transitions?.map((t) => t.name).join(', ');
+      return { error: `Cannot move to '${statusName}'. Valid options: ${available}` };
+    }
+
+    // Execute the move
+    const [errorDoTransition] = await expectError(
+      jira.issues.doTransition({
         issueIdOrKey: issueKey,
         transition: { id: target.id },
-      });
+      }),
+    );
 
-      return { success: true, currentStatus: target.name };
-    } catch (e: any) {
-      return { error: e.message };
+    if (errorDoTransition) {
+      return { error: errorDoTransition.message };
     }
+
+    return { success: true, currentStatus: target.name };
   },
   {
     name: 'transition_issue',
@@ -40,24 +49,26 @@ export const transitionIssue = tool(
 
 export const getTransitions = tool(
   async ({ issueKey }) => {
-    try {
-      const { transitions } = await jira.issues.getTransitions({ issueIdOrKey: issueKey });
+    const [error, { transitions }] = await expectError(
+      jira.issues.getTransitions({ issueIdOrKey: issueKey }),
+    );
 
-      if (!transitions || transitions.length === 0) {
-        return { message: 'No available transitions found for this issue.' };
-      }
-
-      // Return only the name and ID for clarity
-      return {
-        issueKey,
-        availableStatuses: transitions.map((t) => ({
-          name: t.name,
-          id: t.id,
-        })),
-      };
-    } catch (e: any) {
-      return { error: e.message };
+    if (error) {
+      return { error: error.message };
     }
+
+    if (!transitions || transitions.length === 0) {
+      return { message: 'No available transitions found for this issue.' };
+    }
+
+    // Return only the name and ID for clarity
+    return {
+      issueKey,
+      availableStatuses: transitions.map((t) => ({
+        name: t.name,
+        id: t.id,
+      })),
+    };
   },
   {
     name: 'get_transitions',

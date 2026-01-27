@@ -2,19 +2,23 @@ import { tool } from 'langchain';
 import * as z from 'zod';
 
 import { jira } from '@/services/jiraClient.js';
+import { expectError } from '@/lib/expectError.js';
 
 export const linkIssues = tool(
   async ({ linkTypeName, inwardIssueKey, outwardIssueKey }) => {
-    try {
-      await jira.issueLinks.linkIssues({
+    const [error] = await expectError(
+      jira.issueLinks.linkIssues({
         type: { name: linkTypeName },
         inwardIssue: { key: inwardIssueKey },
         outwardIssue: { key: outwardIssueKey },
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'link_issues',
@@ -33,24 +37,26 @@ export const linkIssues = tool(
 
 export const getIssueLinks = tool(
   async ({ issueKey }) => {
-    try {
-      const issue = await jira.issues.getIssue({
+    const [error, issue] = await expectError(
+      jira.issues.getIssue({
         issueIdOrKey: issueKey,
         fields: ['issuelinks'],
-      });
+      }),
+    );
 
-      const links = issue.fields.issuelinks?.map((link: any) => ({
-        id: link.id,
-        type: link.type.name,
-        direction: link.inwardIssue ? 'inward' : 'outward',
-        linkedIssueKey: (link.inwardIssue || link.outwardIssue).key,
-        linkedIssueSummary: (link.inwardIssue || link.outwardIssue).fields.summary,
-      }));
-
-      return { issueKey, links };
-    } catch (error: any) {
+    if (error) {
       return { error: error.message };
     }
+
+    const links = issue.fields.issuelinks?.map((link: any) => ({
+      id: link.id,
+      type: link.type.name,
+      direction: link.inwardIssue ? 'inward' : 'outward',
+      linkedIssueKey: (link.inwardIssue || link.outwardIssue).key,
+      linkedIssueSummary: (link.inwardIssue || link.outwardIssue).fields.summary,
+    }));
+
+    return { issueKey, links };
   },
   {
     name: 'get_issue_links',
@@ -63,14 +69,17 @@ export const getIssueLinks = tool(
 
 export const deleteIssueLink = tool(
   async ({ linkId }) => {
-    try {
-      await jira.issueLinks.deleteIssueLink({
+    const [error] = await expectError(
+      jira.issueLinks.deleteIssueLink({
         linkId,
-      });
-      return { success: true };
-    } catch (error: any) {
+      }),
+    );
+
+    if (error) {
       return { error: error.message };
     }
+
+    return { success: true };
   },
   {
     name: 'delete_issue_link',
@@ -83,16 +92,17 @@ export const deleteIssueLink = tool(
 
 export const getLinkTypes = tool(
   async () => {
-    try {
-      const response = await jira.issueLinkTypes.getIssueLinkTypes();
-      return response.issueLinkTypes?.map((t) => ({
-        name: t.name,
-        inward: t.inward,
-        outward: t.outward,
-      }));
-    } catch (error: any) {
+    const [error, response] = await expectError(jira.issueLinkTypes.getIssueLinkTypes());
+
+    if (error) {
       return { error: error.message };
     }
+
+    return response.issueLinkTypes?.map((t) => ({
+      name: t.name,
+      inward: t.inward,
+      outward: t.outward,
+    }));
   },
   {
     name: 'get_link_types',
